@@ -1,69 +1,94 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
-#include <string.h>
-#include <libgen.h>
+from collections import deque
+import sys
+import os
+import math
 
-#define DEBUG 0
-#define OPT 0
-#define DEFAULT_CAP 1024
+DEBUG = False
+OPT = False
+DEFAULT_CAP = 1024
 
-typedef enum Replacement {LRU, FIFO, OPTIMAL} Replacement;
-typedef enum Inclusion {noninclusive, inclusive} Inclusion;
-typedef unsigned int uint;
-typedef struct Block Block;
-typedef struct ArrayList ArrayList;
-typedef struct Address Address;
-typedef struct Vector Vector;
+class Replacement:
+    LRU, FIFO, OPTIMAL = range(3)
 
-typedef void (*Push)(ArrayList *array_list, uint addr);
-typedef void (*Delete)(ArrayList *array_list, int index);
-typedef void (*Trim)(ArrayList *array_list);
-typedef void (*Resize)(ArrayList *array_list);
-typedef void (*Clear)(ArrayList *array_list);
+class Inclusion:
+    NONINCLUSIVE, INCLUSIVE = range(2)
 
-struct Vector {
-    ArrayList *list;
-    Push push;
-    Delete delete;
-    Trim trim;
-    Resize resize;
-    Clear clear;
-};
-struct ArrayList {
-    uint *ar;
-    int size;
-    int cap;
-};
+class Block:
+    def __init__(self, addr=0, tag=0, valid=False, dirty=False, replacement_count=0):
+        self.addr = addr
+        self.tag = tag
+        self.valid = valid
+        self.dirty = dirty
+        self.replacement_count = replacement_count
 
-struct Block {
-    unsigned int addr;
-    unsigned int tag;
-    int valid;
-    char dirty;
-    int replacementCount;
-};
+class ArrayList:
+    def __init__(self):
+        self.ar = []
+        self.size = 0
+        self.cap = DEFAULT_CAP
 
-struct Address {
-    uint addr;
-    int index;
-    uint tag;
-};
+    def append(self, addr):
+        if len(self.ar) >= self.cap:
+            self.resize()
+        self.ar.append(addr)
+        self.size += 1
 
-uint gen_mask(uint);
-void printInput();
-void printFile(FILE *);
-void usage();
-void init();
-void free_everything();
-void init_vectors();
+    def delete(self, index):
+        if 0 <= index < len(self.ar):
+            del self.ar[index]
+            self.size -= 1
 
-Address calc_addressing(uint, int);
+    def trim(self):
+        self.ar = self.ar[:self.size]
 
-// Vector operations
-void trim(ArrayList *);
-void append(ArrayList *, uint);
-void resize(ArrayList *);
-void delete(ArrayList *, int);
-void clear(ArrayList *);
+    def resize(self):
+        self.cap *= 2
+        self.ar.extend([None] * (self.cap - len(self.ar)))
+
+    def clear(self):
+        self.ar = []
+        self.size = 0
+
+class Vector:
+    def __init__(self):
+        self.list = ArrayList()
+        self.push = self.list.append
+        self.delete = self.list.delete
+        self.trim = self.list.trim
+        self.resize = self.list.resize
+        self.clear = self.list.clear
+
+class Address:
+    def __init__(self, addr, index, tag):
+        self.addr = addr
+        self.index = index
+        self.tag = tag
+
+def gen_mask(bits):
+    return (1 << bits) - 1
+
+def print_input():
+    print("Debug Input")
+
+def print_file(file):
+    print("File contents")
+
+def usage():
+    print("Usage details")
+
+def init():
+    print("Initialize")
+
+def free_everything():
+    print("Free resources")
+
+def init_vectors():
+    print("Initialize vectors")
+
+def calc_addressing(addr, bits):
+    mask = gen_mask(bits)
+    index = (addr >> bits) & mask
+    tag = addr >> (bits + int(math.log2(mask)))
+    return Address(addr, index, tag)
+
+
